@@ -1,0 +1,273 @@
+<?php
+include 'config/config.php';
+?>
+<?php 
+session_start();
+if(!isset($_SESSION["type"])){
+header("location:../index.php");
+}
+if($_SESSION["type"] != "elderly"){
+header("location:../index.php");
+}
+?>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <title></title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+        <script src="plugin/jcanvas.js"></script>
+        <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+        <!-- 
+        <link rel="stylesheet" href="../css/header.css">  
+        <script src="../plugin/jquery_size.js"></script> 
+        <link rel="stylesheet" type="text/css" href="../css/login.css">
+        -->
+
+        <style>
+            .canvasDiv {
+                margin: auto;
+                width: 80%;
+                height: 60%;
+            }
+            canvas{
+                border:3px solid #000000;
+                width:'100%';
+                height:'100%';
+                position:relative;
+            }
+            .circleBtn {
+                display:block;
+                height: 100px;
+                width: 100px;
+                border-radius: 50%;
+                display:inline-block;
+            }
+        </style>
+
+        <script>
+            var canvas = null;
+            var color = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black"];
+            var colorCn = ["紅", "橙", "黃", "綠", "藍", "紫", "黑"];
+            var colorText = null;
+            var right = 0;
+            var question = 0;
+            var time = 0;
+            var currentColor = 0;
+            var display = 0;
+            var mode = 0;
+            var dialog = null;
+            var displayTime = 0;
+
+            $("document").ready(function () {
+                /*      $("#lang").click(function () {
+                 var linkLan = window.location.pathname;
+                 window.location.replace(linkLan + "?lang=<?php echo $lang['langLink'] ?>");
+                 });
+                 
+                 var size = 200;
+                 size = parseInt($.session.get('size'));
+                 if (isNaN(size)) {
+                 size = 200;
+                 fitToContainer();
+                 drawText(color[currentColor], colorText[display]);
+                 }
+                 
+                 $("body").css('font-size', size + "%");
+                 $('#big').click(function () {
+                 if (size >= 200)
+                 return;
+                 size += 50;
+                 $.session.set('size', size);
+                 $("body").css('font-size', size + "%");
+                 fitToContainer();
+                 drawText(color[currentColor], colorText[display]);
+                 });
+                 $('#small').click(function () {
+                 if (size <= 100)
+                 return;
+                 size -= 50;
+                 $.session.set('size', size);
+                 $("body").css('font-size', size + "%");
+                 fitToContainer();
+                 drawText(color[currentColor], colorText[display]);
+                 });*/
+                dialog = $("#create-form").dialog({
+                    autoOpen: false, //true = open, false = close
+                    height: 300,
+                    width: 400,
+                    modal: true
+                });
+                $("#close").click(function () {
+                    dialog.dialog("close");
+                });
+
+                if (!true) {
+                    colorText = color;
+                } else {
+                    colorText = colorCn;
+                }
+                canvas = $("#canvas");
+                fitToContainer();
+                displayAnswerButton($("#answerDiv"));
+                $("#answerDiv").hide();
+                $("#start").click(function () {
+                    displayTime = time = $("#time").val();
+                    mode = $("#mode").val();
+                    $("#answerDiv").show();
+                    if (mode == "limit") {
+                        timer_normal(time);
+                        displayNormalQuestion();
+                    } else if (mode == "countdown") {
+                        timer_countDown(time);
+                        displayNormalQuestion();
+                    }
+                });
+            });
+
+            function drawText(color, text) {
+                fitToContainer();
+                canvas.drawText({
+                    text: "" + text,
+                    fontSize: 200,
+                    x: $("#canvasDiv").width() / 2,
+                    y: $("#canvasDiv").height() / 2,
+                    fillStyle: color,
+                    strokeStyle: color,
+                    strokeWidth: 1
+                });
+            }
+
+            function timer_normal(second) {
+                document.getElementById('timer_div').innerHTML = "<h1><?php echo $lang['time'] ?>" + second + "</h1>";
+                var interval = setInterval(function () {
+                    document.getElementById('timer_div').innerHTML = "<h1><?php echo $lang['time'] ?>" + --second + "</h1>";
+                    if (second <= 0)
+                    {
+                        clearInterval(interval);
+                        result();
+                    }
+                }, 1000);
+            }
+
+            var timer_countDown_interval = null;
+            function timer_countDown(second) {
+                document.getElementById('timer_div').innerHTML = "<h1><?php echo $lang['time'] ?>" + second + "</h1>";
+                timer_countDown_interval = setInterval(function () {
+                    document.getElementById('timer_div').innerHTML = "<h1><?php echo $lang['time'] ?>" + --second + "</h1>";
+                    if (second <= 0)
+                    {
+                        clearInterval(timer_countDown_interval);
+                        result();
+                    }
+                }, 1000);
+            }
+
+            function checkAns(colorNum) {
+                question++;
+                var cor = false;
+                if (currentColor == colorNum) {
+                    right++;
+                    cor = true;
+                }
+                if (mode == "countdown") {
+                    clearInterval(timer_countDown_interval);
+                    if (cor) {
+                        if (time > 2) {
+                            time--;
+                        }
+                        timer_countDown(time);
+                    } else {
+                        result();
+                    }
+                }
+                displayNormalQuestion();
+            }
+
+            function result() {
+                var modeText = "<p><?php echo $lang['gameModeLC'] ?>: ";
+                if (mode == "limit") {
+                    modeText += "<?php echo $lang['limitMode'] ?></p><p><?php echo $lang['time'] ?>: " + displayTime + "s</p>";
+                    modeText += "<p><?php echo $lang['answer'] ?>: " + right + "/" + question;
+                    var persent = parseInt(right / question * 100);
+                    modeText += " (" + persent + "%)" + "</p>";
+                } else if (mode == "countdown") {
+                    modeText += "<?php echo $lang['countDownMode'] ?></p>";
+                }
+                $("#message").html(modeText);
+                dialog.dialog("open");
+                $("#answerDiv").hide();
+                drawText(color, "");
+                right = 0;
+                question = 0;
+            }
+
+            function displayNormalQuestion() {
+                currentColor = Math.floor((Math.random() * color.length));
+                display = Math.floor((Math.random() * color.length));
+                drawText(color[currentColor], colorText[display]);
+            }
+
+            function displayAnswerButton(div) {
+                var btn = "<center>";
+                for (var i = 0; i < color.length; i++) {
+                    btn += "<button onclick='checkAns(" + i + ")' class='circleBtn' style='background-color:"
+                            + color[i] + ";border: 1px solid " + color[i] + ";'></button> ";
+                }
+                btn += "</center>";
+                div.html(btn);
+            }
+        </script>
+    </head>
+    <body>
+        <div class="content">
+            <?php include "header.php" ?>
+            <button id="start"><?php echo $lang['startGame'] ?>Start</button>
+            <?php echo $lang['gameModeLC'] ?>
+            <select id="mode">
+                <option value="limit"><?php echo $lang['limitMode'] ?>Limit Time</option>
+                <option value="countdown"><?php echo $lang['countDownMode'] ?>Count Down</option>
+            </select>
+            <select id='time'>
+                <option value="5">5s</option>
+                <option value="10">10s</option>
+                <option value="15">15s</option>
+                <option value="20">20s</option>
+                <option value="25">25s</option>
+                <option value="30">30s</option>
+            </select>
+
+            <div id="timer_div"><h1><?php echo $lang['viewTime'] ?></h1></div>
+
+            <div id="canvasDiv" class="canvasDiv">        
+                <canvas id="canvas">
+                    Your browser does not support the HTML5 canvas tag.
+                </canvas>
+            </div>
+            <p><div id="answerDiv" style="margin: auto;width: 80%;"></div></p>
+    </div>
+    <script>
+        //set the size to fit canvasDiv
+        function fitToContainer() {
+            var canvas = document.querySelector('canvas');
+            // Make it visually fill the positioned parent
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            // ...then set the internal size to match
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        }
+    </script>
+
+    <div id="create-form" title="<?php echo $lang['resultTit'] ?>"> 
+        <form>
+            <fieldset>
+                <div id="message"></div>
+                <br />
+                <input type="button" id="close" class="btn3" value="OK" />
+            </fieldset>
+        </form>
+    </div>
+</body>
+</html>
